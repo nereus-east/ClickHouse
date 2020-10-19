@@ -613,17 +613,17 @@ class FunctionBinaryArithmetic : public IFunction
     }
 
     /// Multiply aggregation state by integer constant: by merging it with itself specified number of times.
-    void executeAggregateMultiply(ColumnsWithTypeAndName & columns, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) const
+    ColumnPtr executeAggregateMultiply(ColumnsWithTypeAndName & arguments, const DataTypePtr &, size_t input_rows_count) const
     {
-        ColumnNumbers new_arguments = arguments;
-        if (WhichDataType(columns[new_arguments[1]].type).isAggregateFunction())
+        ColumnsWithTypeAndName new_arguments = arguments;
+        if (WhichDataType(new_arguments[1].type).isAggregateFunction())
             std::swap(new_arguments[0], new_arguments[1]);
 
-        if (!isColumnConst(*columns[new_arguments[1]].column))
-            throw Exception{"Illegal column " + columns[new_arguments[1]].column->getName()
+        if (!isColumnConst(*new_arguments[1].column))
+            throw Exception{"Illegal column " + new_arguments[1].column->getName()
                 + " of argument of aggregation state multiply. Should be integer constant", ErrorCodes::ILLEGAL_COLUMN};
 
-        const IColumn & agg_state_column = *columns[new_arguments[0]].column;
+        const IColumn & agg_state_column = *new_arguments[0].column;
         bool agg_state_is_const = isColumnConst(agg_state_column);
         const ColumnAggregateFunction & column = typeid_cast<const ColumnAggregateFunction &>(
             agg_state_is_const ? assert_cast<const ColumnConst &>(agg_state_column).getDataColumn() : agg_state_column);
@@ -647,7 +647,7 @@ class FunctionBinaryArithmetic : public IFunction
         auto & vec_to = column_to->getData();
         auto & vec_from = column_from->getData();
 
-        UInt64 m = typeid_cast<const ColumnConst *>(columns[new_arguments[1]].column.get())->getValue<UInt64>();
+        UInt64 m = typeid_cast<const ColumnConst *>(new_arguments[1].column.get())->getValue<UInt64>();
 
         // Since we merge the function states by ourselves, we have to have an
         // Arena for this. Pass it to the resulting column so that the arena
@@ -674,16 +674,16 @@ class FunctionBinaryArithmetic : public IFunction
         }
 
         if (agg_state_is_const)
-            columns[result].column = ColumnConst::create(std::move(column_to), input_rows_count);
+            return ColumnConst::create(std::move(column_to), input_rows_count);
         else
-            columns[result].column = std::move(column_to);
+            return column_to;
     }
 
     /// Merge two aggregation states together.
-    void executeAggregateAddition(ColumnsWithTypeAndName & columns, const ColumnNumbers & arguments, size_t result, size_t input_rows_count) const
+    ColumnPtr executeAggregateAddition(ColumnsWithTypeAndName & arguments, const DataTypePtr &, size_t input_rows_count) const
     {
-        const IColumn & lhs_column = *columns[arguments[0]].column;
-        const IColumn & rhs_column = *columns[arguments[1]].column;
+        const IColumn & lhs_column = *arguments[0].column;
+        const IColumn & rhs_column = *arguments[1].column;
 
         bool lhs_is_const = isColumnConst(lhs_column);
         bool rhs_is_const = isColumnConst(rhs_column);
@@ -707,9 +707,9 @@ class FunctionBinaryArithmetic : public IFunction
         }
 
         if (lhs_is_const && rhs_is_const)
-            columns[result].column = ColumnConst::create(std::move(column_to), input_rows_count);
+            return ColumnConst::create(std::move(column_to), input_rows_count);
         else
-            columns[result].column = std::move(column_to);
+            return std::move(column_to);
     }
 
     ColumnPtr executeDateTimeIntervalPlusMinus(ColumnsWithTypeAndName & arguments, const DataTypePtr & result_type,

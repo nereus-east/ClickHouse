@@ -653,6 +653,8 @@ private:
 
         if (executeIntegral<Integral...>(data))
             return data.result_column;
+
+        return nullptr;
     }
 
     template <class ...Integral>
