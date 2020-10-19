@@ -54,7 +54,7 @@ public:
 
     bool useDefaultImplementationForConstants() const override { return true; }
 
-    ColumnPtr executeImpl(ColumnsWithTypeAndName & arguments, const DataTypePtr & result_type, size_t /*input_rows_count*/) const override
+    ColumnPtr executeImpl(ColumnsWithTypeAndName & arguments, const DataTypePtr &, size_t /*input_rows_count*/) const override
     {
         if (const ColumnString * col_from = typeid_cast<const ColumnString *>(arguments[0].column.get()))
         {
