@@ -374,8 +374,8 @@ public:
                     }))
                 {
                     if ( !((res = executeType<DataTypeDate>(arguments, result_type))
-                        || (res = executeType<DataTypeDateTime>(arguments, result_type)
-                        || (res = executeType<DataTypeDateTime64>(arguments, result_type)))))
+                        || (res = executeType<DataTypeDateTime>(arguments, result_type))
+                        || (res = executeType<DataTypeDateTime64>(arguments, result_type))))
                         throw Exception(
                             "Illegal column " + arguments[0].column->getName() + " of function " + getName()
                                 + ", must be Integer or DateTime.",
@@ -385,9 +385,9 @@ public:
         }
         else
         {
-            if ( !((res = executeType<DataTypeDate>(arguments, result_type)
-                || (res = executeType<DataTypeDateTime>(arguments, result_type)
-                || (res = executeType<DataTypeDateTime64>(arguments, result_type))))))
+            if ( !((res = executeType<DataTypeDate>(arguments, result_type))
+                || (res = executeType<DataTypeDateTime>(arguments, result_type))
+                || (res = executeType<DataTypeDateTime64>(arguments, result_type))))
                 throw Exception(
                     "Illegal column " + arguments[0].column->getName() + " of function " + getName()
                         + ", must be Date or DateTime.",
