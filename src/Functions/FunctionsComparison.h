@@ -853,7 +853,7 @@ private:
                 { !left_const ? column_converted : col_right_untyped->getPtr(), type_to_compare, "" },
             };
 
-            return executeImpl(tmp_columns, result_type, 2, input_rows_count);
+            return executeImpl(tmp_columns, result_type, input_rows_count);
         }
     }
 
