@@ -1072,6 +1072,7 @@ public:
         const auto & right_argument = arguments[1];
         const auto * left_generic = left_argument.type.get();
         const auto * right_generic = right_argument.type.get();
+        ColumnPtr res;
         bool valid = castBothTypes(left_generic, right_generic, [&](const auto & left, const auto & right)
         {
             using LeftDataType = std::decay_t<decltype(left)>;
@@ -1081,10 +1082,10 @@ public:
                 if constexpr (!Op<DataTypeFixedString, DataTypeFixedString>::allow_fixed_string)
                     return false;
                 else
-                    return executeFixedString(arguments);
+                    return (res = executeFixedString(arguments)) != nullptr;
             }
             else
-                return executeNumeric(arguments, left, right);
+                return (res = executeNumeric(arguments, left, right)) != nullptr;
         });
 
         if (!valid)
@@ -1097,6 +1098,8 @@ public:
                 left_argument.name, left_argument.type->getName(),
                 right_argument.name, right_argument.type->getName());
         }
+
+        return res;
     }
 
 #if USE_EMBEDDED_COMPILER
