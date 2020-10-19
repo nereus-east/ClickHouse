@@ -694,6 +694,8 @@ private:
         if (!callOnBasicTypes<true, false, true, true>(left_number, right_number, call))
             throw Exception("Wrong call for " + getName() + " with " + col_left.type->getName() + " and " + col_right.type->getName(),
                             ErrorCodes::LOGICAL_ERROR);
+
+        return res;
     }
 
     ColumnPtr executeString(const IColumn * c0, const IColumn * c1) const
