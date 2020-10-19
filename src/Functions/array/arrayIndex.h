@@ -842,6 +842,8 @@ private:
             if (dispatchConvertedLCColumns(data))
                 return data.result_column;
         }
+
+        return nullptr;
     }
 
     static bool dispatchConvertedLCColumns(ExecutionData& data)

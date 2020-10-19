@@ -1268,12 +1268,11 @@ public:
                 {
                     ColumnsWithTypeAndName columns_with_constant
                         = {{left.type->createColumnConst(1, point), left.type, left.name},
-                           {right.column->cloneResized(1), right.type, right.name},
-                           {nullptr, return_type, ""}};
+                           {right.column->cloneResized(1), right.type, right.name}};
 
-                    Base::executeImpl(columns_with_constant, {0, 1}, 2, 1);
+                    auto col = Base::executeImpl(columns_with_constant, return_type, 1);
                     Field point_transformed;
-                    columns_with_constant[2].column->get(0, point_transformed);
+                    col->get(0, point_transformed);
                     return point_transformed;
                 };
 
