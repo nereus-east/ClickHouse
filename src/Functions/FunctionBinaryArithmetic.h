@@ -1181,7 +1181,7 @@ public:
     {
     }
 
-    void executeImpl(ColumnsWithTypeAndName & arguments, const DataTypePtr & result_type, size_t input_rows_count) const override
+    ColumnPtr executeImpl(ColumnsWithTypeAndName & arguments, const DataTypePtr & result_type, size_t input_rows_count) const override
     {
         if (left.column && isColumnConst(*left.column) && arguments.size() == 1)
         {
@@ -1233,12 +1233,11 @@ public:
                 {
                     ColumnsWithTypeAndName columns_with_constant
                         = {{left.column->cloneResized(1), left.type, left.name},
-                           {right.type->createColumnConst(1, point), right.type, right.name},
-                           {nullptr, return_type, ""}};
+                           {right.type->createColumnConst(1, point), right.type, right.name}};
 
-                    Base::executeImpl(columns_with_constant, {0, 1}, 2, 1);
+                    auto col = Base::executeImpl(columns_with_constant, return_type, 1);
                     Field point_transformed;
-                    columns_with_constant[2].column->get(0, point_transformed);
+                    col->get(0, point_transformed);
                     return point_transformed;
                 };
                 transform(left_point);
