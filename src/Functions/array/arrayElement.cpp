@@ -749,7 +749,7 @@ ColumnPtr FunctionArrayElement::executeImpl(ColumnsWithTypeAndName & arguments, 
     if (!is_array_of_nullable)
     {
         ArrayImpl::NullMapBuilder builder;
-        perform(arguments, result_type, builder, input_rows_count);
+        return perform(arguments, result_type, builder, input_rows_count);
     }
     else
     {
