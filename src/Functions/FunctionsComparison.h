@@ -677,6 +677,7 @@ private:
     {
         TypeIndex left_number = col_left.type->getTypeId();
         TypeIndex right_number = col_right.type->getTypeId();
+        ColumnPtr res;
 
         auto call = [&](const auto & types) -> bool
         {
@@ -685,9 +686,9 @@ private:
             using RightDataType = typename Types::RightType;
 
             if (check_decimal_overflow)
-                return DecimalComparison<LeftDataType, RightDataType, Op, true>::apply(col_left, col_right);
+                return (res = DecimalComparison<LeftDataType, RightDataType, Op, true>::apply(col_left, col_right)) != nullptr;
             else
-                return DecimalComparison<LeftDataType, RightDataType, Op, false>::apply(col_left, col_right);
+                return (res = DecimalComparison<LeftDataType, RightDataType, Op, false>::apply(col_left, col_right)) != nullptr;
         };
 
         if (!callOnBasicTypes<true, false, true, true>(left_number, right_number, call))
@@ -913,7 +914,7 @@ private:
             y[i].column = y_columns[i];
         }
 
-        executeTupleImpl(x, y, tuple_size, input_rows_count);
+        return executeTupleImpl(x, y, tuple_size, input_rows_count);
     }
 
     ColumnPtr executeTupleImpl(const ColumnsWithTypeAndName & x,
