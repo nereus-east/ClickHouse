@@ -1,3 +1,8 @@
+---
+toc_priority: 42
+toc_title: Decimal
+---
+
 # Decimal(P, S), Decimal32(S), Decimal64(S), Decimal128(S), Decimal256(S) {#decimalp-s-decimal32s-decimal64s-decimal128s}
 
 Знаковые дробные числа с сохранением точности операций сложения, умножения и вычитания. Для деления осуществляется отбрасывание (не округление) знаков, не попадающих в младший десятичный разряд.
@@ -107,4 +112,3 @@ DB::Exception: Can't compare.
 -   [countDigits](../../sql-reference/functions/other-functions.md#count-digits)
 
 
-[Оригинальная статья](https://clickhouse.tech/docs/ru/data_types/decimal/) <!--hide-->

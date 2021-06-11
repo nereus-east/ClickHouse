@@ -1,3 +1,8 @@
+---
+toc_priority: 45
+toc_title: "Иерархические словари"
+---
+
 # Иерархические словари {#ierarkhicheskie-slovari}
 
 ClickHouse поддерживает иерархические словари с [числовыми ключом](external-dicts-dict-structure.md#ext_dict-numeric-key).
@@ -60,4 +65,3 @@ ClickHouse поддерживает свойство [hierarchical](external-dic
 </dictionary>
 ```
 
-[Оригинальная статья](https://clickhouse.tech/docs/ru/query_language/dicts/external_dicts_dict_hierarchical/) <!--hide-->

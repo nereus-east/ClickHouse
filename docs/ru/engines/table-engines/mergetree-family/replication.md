@@ -1,3 +1,8 @@
+---
+toc_priority: 31
+toc_title: "Репликация данных"
+---
+
 # Репликация данных {#table_engines-replication}
 
 Репликация поддерживается только для таблиц семейства MergeTree:
@@ -14,7 +19,7 @@
 
 Репликация не зависит от шардирования. На каждом шарде репликация работает независимо.
 
-Реплицируются сжатые данные запросов `INSERT`, `ALTER` (см. подробности в описании запроса [ALTER](../../../engines/table-engines/mergetree-family/replication.md#query_language_queries_alter)).
+Реплицируются сжатые данные запросов `INSERT`, `ALTER` (см. подробности в описании запроса [ALTER](../../../sql-reference/statements/alter/index.md#query_language_queries_alter)).
 
 Запросы `CREATE`, `DROP`, `ATTACH`, `DETACH` и `RENAME` выполняются на одном сервере и не реплицируются:
 
@@ -59,6 +64,8 @@ ClickHouse хранит метаинформацию о репликах в [Apa
 Для очень больших кластеров, можно использовать разные кластеры ZooKeeper для разных шардов. Впрочем, на кластере Яндекс.Метрики (примерно 300 серверов) такой необходимости не возникает.
 
 Репликация асинхронная, мульти-мастер. Запросы `INSERT` и `ALTER` можно направлять на любой доступный сервер. Данные вставятся на сервер, где выполнен запрос, а затем скопируются на остальные серверы. В связи с асинхронностью, только что вставленные данные появляются на остальных репликах с небольшой задержкой. Если часть реплик недоступна, данные на них запишутся тогда, когда они станут доступны. Если реплика доступна, то задержка составляет столько времени, сколько требуется для передачи блока сжатых данных по сети. Количество потоков для выполнения фоновых задач можно задать с помощью настройки [background_schedule_pool_size](../../../operations/settings/settings.md#background_schedule_pool_size).
+
+Движок `ReplicatedMergeTree` использует отдельный пул потоков для скачивания кусков данных. Размер пула ограничен настройкой [background_fetches_pool_size](../../../operations/settings/settings.md#background_fetches_pool_size), которую можно указать при перезапуске сервера. 
 
 По умолчанию, запрос INSERT ждёт подтверждения записи только от одной реплики. Если данные были успешно записаны только на одну реплику, и сервер с этой репликой перестал существовать, то записанные данные будут потеряны. Вы можете включить подтверждение записи от нескольких реплик, используя настройку `insert_quorum`.
 
@@ -144,6 +151,31 @@ CREATE TABLE table_name
 
 При работе с большими кластерами мы рекомендуем использовать подстановки, они уменьшают вероятность ошибки.
 
+Можно указать аргументы по умолчанию для движка реплицируемых таблиц в файле конфигурации сервера.
+
+```xml
+<default_replica_path>/clickhouse/tables/{shard}/{database}/{table}</default_replica_path>
+<default_replica_name>{replica}</default_replica_name>
+```
+
+В этом случае можно опустить аргументы при создании таблиц:
+
+``` sql
+CREATE TABLE table_name (
+	x UInt32
+) ENGINE = ReplicatedMergeTree 
+ORDER BY x;
+```
+
+Это будет эквивалентно следующему запросу:
+
+``` sql
+CREATE TABLE table_name (
+	x UInt32
+) ENGINE = ReplicatedMergeTree('/clickhouse/tables/{shard}/{database}/table_name', '{replica}') 
+ORDER BY x;
+```
+
 Выполните запрос `CREATE TABLE` на каждой реплике. Запрос создаёт новую реплицируемую таблицу, или добавляет новую реплику к имеющимся.
 
 Если вы добавляете новую реплику после того, как таблица на других репликах уже содержит некоторые данные, то после выполнения запроса, данные на новую реплику будут скачаны с других реплик. То есть, новая реплика синхронизирует себя с остальными.
@@ -216,4 +248,9 @@ $ sudo -u clickhouse touch /var/lib/clickhouse/flags/force_restore_data
 
 Если данные в ZooKeeper оказались утеряны или повреждены, то вы можете сохранить данные, переместив их в нереплицируемую таблицу, как описано в пункте выше.
 
-[Оригинальная статья](https://clickhouse.tech/docs/ru/operations/table_engines/replication/) <!--hide-->
+**Смотрите также**
+
+-   [background_schedule_pool_size](../../../operations/settings/settings.md#background_schedule_pool_size)
+-   [background_fetches_pool_size](../../../operations/settings/settings.md#background_fetches_pool_size)
+-   [execute_merges_on_single_replica_time_threshold](../../../operations/settings/settings.md#execute-merges-on-single-replica-time-threshold)
+

@@ -1,3 +1,8 @@
+---
+toc_priority: 57
+toc_title: "Конфигурационные параметры сервера"
+---
+
 # Конфигурационные параметры сервера {#server-configuration-parameters-reference}
 
 ## builtin_dictionaries_reload_interval {#builtin-dictionaries-reload-interval}
@@ -75,6 +80,33 @@ ClickHouse проверяет условия для `min_part_size` и `min_part
 
 -   [Пользовательские настройки](../../operations/settings/index.md#custom_settings)
 
+## core_dump {#server_configuration_parameters-core_dump}
+
+Задает мягкое ограничение для размера файла дампа памяти.
+
+Возможные значения:
+
+-   положительное целое число.
+
+Значение по умолчанию: `1073741824` (1 ГБ).
+
+!!! info "Примечание"
+    Жесткое ограничение настраивается с помощью системных инструментов.
+
+**Пример**
+
+```xml
+<core_dump>
+    <size_limit>1073741824</size_limit>
+</core_dump> 
+```
+
+## database_atomic_delay_before_drop_table_sec {#database_atomic_delay_before_drop_table_sec}
+
+Устанавливает задержку перед удалением табличных данных, в секундах. Если запрос имеет идентификатор `SYNC`, эта настройка игнорируется.
+
+Значение по умолчанию: `480` (8 минут).
+
 ## default\_database {#default-database}
 
 База данных по умолчанию.
@@ -122,7 +154,8 @@ ClickHouse проверяет условия для `min_part_size` и `min_part
 
 Если `true`, то каждый словарь создаётся при первом использовании. Если словарь не удалось создать, то вызов функции, использующей словарь, сгенерирует исключение.
 
-Если `false`, то все словари создаются при старте сервера, и в случае ошибки сервер завершает работу.
+Если `false`, то все словари создаются при старте сервера, если словарь или словари создаются слишком долго или создаются с ошибкой, то сервер загружается без 
+этих словарей и продолжает попытки создать эти словари.
 
 По умолчанию - `true`.
 
@@ -258,7 +291,7 @@ ClickHouse проверяет условия для `min_part_size` и `min_part
 
 ## interserver_http_host {#interserver-http-host}
 
-Имя хоста, которое могут использовать другие серверы для обращения к этому.
+Имя хоста, которое могут использовать другие серверы для обращения к этому хосту.
 
 Если не указано, то определяется аналогично команде `hostname -f`.
 
@@ -270,10 +303,35 @@ ClickHouse проверяет условия для `min_part_size` и `min_part
 <interserver_http_host>example.yandex.ru</interserver_http_host>
 ```
 
+## interserver_https_port {#interserver-https-port}
+
+Порт для обмена данными между репликами ClickHouse по протоколу `HTTPS`.
+
+**Пример**
+
+``` xml
+<interserver_https_port>9010</interserver_https_port>
+```
+
+## interserver_https_host {#interserver-https-host}
+
+Имя хоста, которое могут использовать другие реплики для обращения к нему по протоколу `HTTPS`.
+
+**Пример**
+
+``` xml
+<interserver_https_host>example.yandex.ru</interserver_https_host>
+```
+
+
+
 ## interserver_http_credentials {#server-settings-interserver-http-credentials}
 
 Имя пользователя и пароль, использующиеся для аутентификации при [репликации](../../operations/server-configuration-parameters/settings.md) движками Replicated\*. Это имя пользователя и пароль используются только для взаимодействия между репликами кластера и никак не связаны с аутентификацией клиентов ClickHouse. Сервер проверяет совпадение имени и пароля для соединяющихся с ним реплик, а также использует это же имя и пароль для соединения с другими репликами. Соответственно, эти имя и пароль должны быть прописаны одинаковыми для всех реплик кластера.
 По умолчанию аутентификация не используется.
+
+!!! note "Примечание"
+    Эти учетные данные являются общими для обмена данными по протоколам `HTTP` и `HTTPS`.
 
 Раздел содержит следующие параметры:
 
@@ -357,7 +415,7 @@ ClickHouse проверяет условия для `min_part_size` и `min_part
     Значения по умолчанию: при указанном `address` - `LOG_USER`, иначе - `LOG_DAEMON`
 -   format - формат сообщений. Возможные значения - `bsd` и `syslog`
 
-## send_crash_reports {#server_configuration_parameters-logger}
+## send_crash_reports {#server_configuration_parameters-send_crash_reports}
 
 Настройки для отправки сообщений о сбоях в команду разработчиков ядра ClickHouse через [Sentry](https://sentry.io).
 Включение этих настроек, особенно в pre-production среде, может дать очень ценную информацию и поможет развитию ClickHouse.
@@ -414,7 +472,7 @@ ClickHouse проверяет условия для `min_part_size` и `min_part
 Возможные значения:
 
 -   Положительное целое число.
--   0 — объём используемой памяти не ограничен.
+-   0 — автоматически.
 
 Значение по умолчанию: `0`.
 
@@ -454,12 +512,55 @@ ClickHouse проверяет условия для `min_part_size` и `min_part
 
 ## max_concurrent_queries {#max-concurrent-queries}
 
-Максимальное количество одновременно обрабатываемых запросов.
+Определяет максимальное количество одновременно обрабатываемых запросов, связанных с таблицей семейства `MergeTree`. Запросы также могут быть ограничены настройками: [max_concurrent_queries_for_all_users](#max-concurrent-queries-for-all-users), [min_marks_to_honor_max_concurrent_queries](#min-marks-to-honor-max-concurrent-queries).
+
+!!! info "Примечание"
+	Параметры этих настроек могут быть изменены во время выполнения запросов и вступят в силу немедленно. Запросы, которые уже запущены, выполнятся без изменений. 
+
+Возможные значения:
+
+-   Положительное целое число.
+-   0 — выключена.
 
 **Пример**
 
 ``` xml
 <max_concurrent_queries>100</max_concurrent_queries>
+```
+
+## max_concurrent_queries_for_all_users {#max-concurrent-queries-for-all-users}
+
+Если значение этой настройки меньше или равно текущему количеству одновременно обрабатываемых запросов, то будет сгенерировано исключение.
+
+Пример: `max_concurrent_queries_for_all_users` установлен на 99 для всех пользователей. Чтобы выполнять запросы даже когда сервер перегружен, администратор баз данных устанавливает для себя значение настройки на 100.
+
+Изменение настройки для одного запроса или пользователя не влияет на другие запросы.
+
+Значение по умолчанию: `0` — отсутствие ограничений.
+
+**Пример**
+
+``` xml
+<max_concurrent_queries_for_all_users>99</max_concurrent_queries_for_all_users>
+```
+
+**Смотрите также**
+
+-   [max_concurrent_queries](#max-concurrent-queries)
+
+## min_marks_to_honor_max_concurrent_queries {#min-marks-to-honor-max-concurrent-queries}
+
+Определяет минимальное количество засечек, считываемых запросом для применения настройки [max_concurrent_queries](#max-concurrent-queries).
+
+Возможные значения:
+
+-   Положительное целое число.
+-   0 — выключена.
+
+**Пример**
+
+``` xml
+<min_marks_to_honor_max_concurrent_queries>10</min_marks_to_honor_max_concurrent_queries>
 ```
 
 ## max_connections {#max-connections}
@@ -528,6 +629,51 @@ ClickHouse проверяет условия для `min_part_size` и `min_part
 <merge_tree>
     <max_suspicious_broken_parts>5</max_suspicious_broken_parts>
 </merge_tree>
+```
+
+## metric_log {#metric_log}
+
+Эта настройка включена по умолчанию. Если это не так, вы можете включить ее сами.
+
+**Включение**
+
+Чтобы вручную включить сбор истории метрик в таблице [`system.metric_log`](../../operations/system-tables/metric_log.md), создайте `/etc/clickhouse-server/config.d/metric_log.xml` следующего содержания:
+
+``` xml
+<yandex>
+    <metric_log>
+        <database>system</database>
+        <table>metric_log</table>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+        <collect_interval_milliseconds>1000</collect_interval_milliseconds>
+    </metric_log>
+</yandex>
+```
+
+**Выключение**
+
+Чтобы отключить настройку `metric_log` , создайте файл `/etc/clickhouse-server/config.d/disable_metric_log.xml` следующего содержания:
+
+``` xml
+<yandex>
+<metric_log remove="1" />
+</yandex>
+```
+
+## replicated\_merge\_tree {#server_configuration_parameters-replicated_merge_tree}
+
+Тонкая настройка таблиц в [ReplicatedMergeTree](../../engines/table-engines/mergetree-family/mergetree.md).
+
+Эта настройка имеет более высокий приоритет.
+
+Подробнее смотрите в заголовочном файле MergeTreeSettings.h.
+
+**Пример**
+
+``` xml
+<replicated_merge_tree>
+    <max_suspicious_broken_parts>5</max_suspicious_broken_parts>
+</replicated_merge_tree>
 ```
 
 ## openSSL {#server_configuration_parameters-openssl}
@@ -1027,4 +1173,43 @@ ClickHouse использует ZooKeeper для хранения метадан
 
 - [Управление доступом](../access-rights.md#access-control)
 
-[Оригинальная статья](https://clickhouse.tech/docs/ru/operations/server_configuration_parameters/settings/) <!--hide-->
+## user_directories {#user_directories}
+
+Секция конфигурационного файла,которая содержит настройки:
+-   Путь к конфигурационному файлу с предустановленными пользователями.
+-   Путь к файлу, в котором содержатся пользователи, созданные при помощи SQL команд. 
+
+Если эта секция определена, путь из [users_config](../../operations/server-configuration-parameters/settings.md#users-config) и [access_control_path](../../operations/server-configuration-parameters/settings.md#access_control_path) не используется.
+
+Секция `user_directories` может содержать любое количество элементов, порядок расположения элементов обозначает их приоритет (чем выше элемент, тем выше приоритет).
+
+**Пример**
+
+``` xml
+<user_directories>
+    <users_xml>
+        <path>/etc/clickhouse-server/users.xml</path>
+    </users_xml>
+    <local_directory>
+        <path>/var/lib/clickhouse/access/</path>
+    </local_directory>
+</user_directories>
+```
+
+Также вы можете указать настройку `memory` — означает хранение информации только в памяти, без записи на диск, и `ldap` — означает хранения информации на [LDAP-сервере](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol).
+
+Чтобы добавить LDAP-сервер в качестве удаленного каталога пользователей, которые не определены локально, определите один раздел `ldap` со следующими параметрами:
+-   `server` — имя одного из LDAP-серверов, определенных в секции `ldap_servers` конфигурациионного файла. Этот параметр явялется необязательным и может быть пустым.
+-   `roles` — раздел со списком локально определенных ролей, которые будут назначены каждому пользователю, полученному с LDAP-сервера. Если роли не заданы, пользователь не сможет выполнять никаких действий после аутентификации. Если какая-либо из перечисленных ролей не определена локально во время проверки подлинности, попытка проверки подлинности завершится неудачей, как если бы предоставленный пароль был неверным.
+
+**Пример**
+
+``` xml
+<ldap>
+    <server>my_ldap_server</server>
+        <roles>
+            <my_local_role1 />
+            <my_local_role2 />
+        </roles>
+</ldap>
+```

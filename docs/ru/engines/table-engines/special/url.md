@@ -1,3 +1,8 @@
+---
+toc_priority: 41
+toc_title: URL
+---
+
 # URL(URL, Format) {#table_engines-url}
 
 Управляет данными на удаленном HTTP/HTTPS сервере. Данный движок похож
@@ -72,4 +77,3 @@ SELECT * FROM url_engine_table
     -   индексы;
     -   репликация.
 
-[Оригинальная статья](https://clickhouse.tech/docs/ru/operations/table_engines/url/) <!--hide-->

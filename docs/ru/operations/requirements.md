@@ -1,3 +1,8 @@
+---
+toc_priority: 44
+toc_title: "Требования"
+---
+
 # Требования {#trebovaniia}
 
 ## Процессор {#protsessor}

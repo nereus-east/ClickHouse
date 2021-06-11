@@ -1,3 +1,8 @@
+---
+toc_priority: 40
+toc_title: Join
+---
+
 # Join {#join}
 
 Подготовленная структура данных для использования в операциях [JOIN](../../../engines/table-engines/special/join.md#select-join).
@@ -90,6 +95,7 @@ SELECT joinGet('id_val_join', 'val', toUInt32(1))
 -   [max_bytes_in_join](../../../operations/settings/query-complexity.md#settings-max_bytes_in_join)
 -   [join_overflow_mode](../../../operations/settings/query-complexity.md#settings-join_overflow_mode)
 -   [join_any_take_last_row](../../../operations/settings/settings.md#settings-join_any_take_last_row)
+-   [persistent](../../../operations/settings/settings.md#persistent)
 
 Таблицы с движком `Join` нельзя использовать в операциях `GLOBAL JOIN`.
 
@@ -101,4 +107,3 @@ SELECT joinGet('id_val_join', 'val', toUInt32(1))
 
 При аварийном перезапуске сервера блок данных на диске может быть потерян или повреждён. В последнем случае, может потребоваться вручную удалить файл с повреждёнными данными.
 
-[Оригинальная статья](https://clickhouse.tech/docs/ru/operations/table_engines/join/) <!--hide-->

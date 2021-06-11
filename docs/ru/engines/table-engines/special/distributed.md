@@ -1,3 +1,8 @@
+---
+toc_priority: 33
+toc_title: Distributed
+---
+
 # Distributed {#distributed}
 
 **Движок Distributed не хранит данные самостоятельно**, а позволяет обрабатывать запросы распределённо, на нескольких серверах. Чтение автоматически распараллеливается. При чтении будут использованы индексы таблиц на удалённых серверах, если есть.
@@ -131,4 +136,3 @@ logs - имя кластера в конфигурационном файле с
 
 При выставлении опции max_parallel_replicas выполнение запроса распараллеливается по всем репликам внутри одного шарда. Подробнее смотрите раздел [max_parallel_replicas](../../../operations/settings/settings.md#settings-max_parallel_replicas).
 
-[Оригинальная статья](https://clickhouse.tech/docs/ru/operations/table_engines/distributed/) <!--hide-->

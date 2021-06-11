@@ -5,26 +5,12 @@ from contextlib import contextmanager
 import testflows.settings as settings
 from testflows.core import *
 from testflows.asserts import error
-from ldap.authentication.tests.common import getuid, Config, ldap_servers, add_config, restart
+from ldap.authentication.tests.common import getuid, Config, ldap_servers, add_config, modify_config, restart
 from ldap.authentication.tests.common import xmltree, xml_indent, xml_append, xml_with_utf8
 from ldap.authentication.tests.common import ldap_user, ldap_users, add_user_to_ldap, delete_user_from_ldap
 from ldap.authentication.tests.common import change_user_password_in_ldap, change_user_cn_in_ldap
+from ldap.authentication.tests.common import create_ldap_servers_config_content
 from ldap.authentication.tests.common import randomword
-
-def join(tasks, timeout):
-    """Join async tasks by waiting for their completion.
-    """
-    task_exc = None
-
-    for task in tasks:
-        try:
-            task.get(timeout=timeout)
-        except Exception as exc:
-            if task_exc is None:
-                task_exc = exc
-
-    if task_exc is not None:
-        raise task_exc
 
 @contextmanager
 def table(name, create_statement, on_cluster=False):
@@ -70,6 +56,15 @@ def rbac_roles(*roles):
                 with By(f"dropping role {role}", flags=TE):
                     node.query(f"DROP ROLE IF EXISTS {role}")
 
+def verify_ldap_user_exists(server, username, password):
+    """Check that LDAP user is defined on the LDAP server.
+    """
+    with By("searching LDAP database"):
+        ldap_node = current().context.cluster.node(server)
+        r = ldap_node.command(
+            f"ldapwhoami -H ldap://localhost -D 'cn={user_name},ou=users,dc=company,dc=com' -w {password}")
+        assert r.exitcode == 0, error()
+
 def create_ldap_external_user_directory_config_content(server=None, roles=None, **kwargs):
     """Create LDAP external user directory configuration file content.
     """
@@ -86,7 +81,10 @@ def create_entries_ldap_external_user_directory_config_content(entries, config_d
         <user_directories>
             <ldap>
                 <server>my_ldap_server</server>
-                <user_template>my_user</user_template>
+                <roles>
+                    <my_local_role1 />
+                    <my_local_role2 />
+                </roles>
             </ldap>
         </user_directories>
     ```
@@ -120,7 +118,7 @@ def create_entries_ldap_external_user_directory_config_content(entries, config_d
 
     return Config(content, path, name, uid, "config.xml")
 
-def invalid_ldap_external_user_directory_config(server, roles, message, tail=20, timeout=20, config=None):
+def invalid_ldap_external_user_directory_config(server, roles, message, tail=30, timeout=60, config=None):
     """Check that ClickHouse errors when trying to load invalid LDAP external user directory
     configuration file.
     """
@@ -172,7 +170,7 @@ def invalid_ldap_external_user_directory_config(server, roles, message, tail=20,
 
 @contextmanager
 def ldap_external_user_directory(server, roles, config_d_dir="/etc/clickhouse-server/config.d",
-        config_file=None, timeout=20, restart=True, config=None):
+        config_file=None, timeout=60, restart=True, config=None):
     """Add LDAP external user directory.
     """
     if config_file is None:
@@ -197,8 +195,26 @@ def login(servers, directory_server, *users, config=None):
 
 @TestStep(When)
 @Name("I login as {username} and execute query")
-def login_and_execute_query(self, username, password, exitcode=None, message=None, steps=True, timeout=60):
-    self.context.node.query("SELECT 1",
-        settings=[("user", username), ("password", password)],
-        exitcode=exitcode or 0,
-        message=message, steps=steps, timeout=timeout)
+def login_and_execute_query(self, username, password, exitcode=None, message=None, steps=True, timeout=60, poll=False):
+    if poll:
+        start_time = time.time()
+        attempt = 0
+
+        with By("repeatedly trying to login until successful or timeout"):
+            while True:
+                with When(f"attempt #{attempt}"):
+                    r = self.context.node.query("SELECT 1", settings=[("user", username), ("password", password)],
+                        no_checks=True, steps=False, timeout=timeout)
+
+                if r.exitcode == (0 if exitcode is None else exitcode) and (message in r.output if message is not None else True):
+                    break
+
+                if time.time() - start_time > timeout:
+                    fail(f"timeout {timeout} trying to login")
+
+                attempt += 1
+    else:
+        self.context.node.query("SELECT 1",
+            settings=[("user", username), ("password", password)],
+            exitcode=(0 if exitcode is None else exitcode),
+            message=message, steps=steps, timeout=timeout)

@@ -1,6 +1,6 @@
 # system.query_thread_log {#system_tables-query_thread_log}
 
-Contains information about threads which execute queries, for example, thread name, thread start time, duration of query processing.
+Contains information about threads that execute queries, for example, thread name, thread start time, duration of query processing.
 
 To start logging:
 
@@ -9,7 +9,7 @@ To start logging:
 
 The flushing period of data is set in `flush_interval_milliseconds` parameter of the [query_thread_log](../../operations/server-configuration-parameters/settings.md#server_configuration_parameters-query_thread_log) server settings section. To force flushing, use the [SYSTEM FLUSH LOGS](../../sql-reference/statements/system.md#query_language-system-flush_logs) query.
 
-ClickHouse doesn’t delete data from the table automatically. See [Introduction](../../operations/system-tables/index.md#system-tables-introduction) for more details.
+ClickHouse does not delete data from the table automatically. See [Introduction](../../operations/system-tables/index.md#system-tables-introduction) for more details.
 
 Columns:
 

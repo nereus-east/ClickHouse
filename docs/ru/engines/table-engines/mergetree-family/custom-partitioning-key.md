@@ -1,3 +1,9 @@
+---
+toc_priority: 32
+toc_title: "Произвольный ключ партиционирования"
+---
+
+
 # Произвольный ключ партиционирования {#proizvolnyi-kliuch-partitsionirovaniia}
 
 Партиционирование данных доступно для таблиц семейства [MergeTree](mergetree.md) (включая [реплицированные таблицы](replication.md)). Таблицы [MaterializedView](../special/materializedview.md#materializedview), созданные на основе таблиц MergeTree, также поддерживают партиционирование.
@@ -27,6 +33,8 @@ ORDER BY (CounterID, StartDate, intHash32(UserID));
 ```
 
 В этом примере задано партиционирование по типам событий, произошедших в течение текущей недели.
+
+По умолчанию, ключ партиционирования с плавающей запятой не поддерживается. Чтобы использовать его, включите настройку [allow_floating_point_partition_key](../../../operations/settings/merge-tree-settings.md#allow_floating_point_partition_key).
 
 Каждая партиция состоит из отдельных фрагментов или так называемых *кусков данных*. Каждый кусок отсортирован по первичному ключу. При вставке данных в таблицу каждая отдельная запись сохраняется в виде отдельного куска. Через некоторое время после вставки (обычно до 10 минут), ClickHouse выполняет в фоновом режиме слияние данных — в результате куски для одной и той же партиции будут объединены в более крупный кусок.
 
@@ -123,4 +131,3 @@ drwxr-xr-x 2 clickhouse clickhouse 4096 Feb  1 16:48 detached
 
 ClickHouse позволяет производить различные манипуляции с кусками: удалять, копировать из одной таблицы в другую или создавать их резервные копии. Подробнее см. в разделе [Манипуляции с партициями и кусками](../../../engines/table-engines/mergetree-family/custom-partitioning-key.md#alter_manipulations-with-partitions).
 
-[Оригинальная статья:](https://clickhouse.tech/docs/ru/operations/table_engines/custom_partitioning_key/) <!--hide-->

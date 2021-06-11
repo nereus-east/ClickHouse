@@ -4,11 +4,14 @@
 #include <Columns/ColumnAggregateFunction.h>
 #include <Columns/ColumnTuple.h>
 #include <Common/AlignedBuffer.h>
+#include <Common/Arena.h>
 #include <Common/FieldVisitors.h>
 #include <Common/StringUtils/StringUtils.h>
 #include <DataTypes/DataTypeArray.h>
+#include <DataTypes/DataTypeCustomSimpleAggregateFunction.h>
 #include <DataTypes/NestedUtils.h>
 #include <IO/WriteHelpers.h>
+
 
 namespace DB
 {
@@ -44,13 +47,20 @@ struct SummingSortedAlgorithm::AggregateDescription
     /// In case when column has type AggregateFunction:
     /// use the aggregate function from itself instead of 'function' above.
     bool is_agg_func_type = false;
+    bool is_simple_agg_func_type = false;
 
     void init(const char * function_name, const DataTypes & argument_types)
     {
         AggregateFunctionProperties properties;
-        function = AggregateFunctionFactory::instance().get(function_name, argument_types, {}, properties);
+        init(AggregateFunctionFactory::instance().get(function_name, argument_types, {}, properties));
+    }
+
+    void init(AggregateFunctionPtr function_, bool is_simple_agg_func_type_ = false)
+    {
+        function = std::move(function_);
         add_function = function->getAddressOfAddFunction();
         state.reset(function->sizeOfData(), function->alignOfData());
+        is_simple_agg_func_type = is_simple_agg_func_type_;
     }
 
     void createState()
@@ -99,6 +109,9 @@ static bool isInPartitionKey(const std::string & column_name, const Names & part
     auto is_in_partition_key = std::find(partition_key_columns.begin(), partition_key_columns.end(), column_name);
     return is_in_partition_key != partition_key_columns.end();
 }
+
+
+using Row = std::vector<Field>;
 
 /// Returns true if merge result is not empty
 static bool mergeMap(const SummingSortedAlgorithm::MapDescription & desc,
@@ -206,8 +219,9 @@ static SummingSortedAlgorithm::ColumnsDefinition defineColumns(
     {
         const ColumnWithTypeAndName & column = header.safeGetByPosition(i);
 
+        const auto * simple = dynamic_cast<const DataTypeCustomSimpleAggregateFunction *>(column.type->getCustomName());
         /// Discover nested Maps and find columns for summation
-        if (typeid_cast<const DataTypeArray *>(column.type.get()))
+        if (typeid_cast<const DataTypeArray *>(column.type.get()) && !simple)
         {
             const auto map_name = Nested::extractTableName(column.name);
             /// if nested table name ends with `Map` it is a possible candidate for special handling
@@ -224,7 +238,7 @@ static SummingSortedAlgorithm::ColumnsDefinition defineColumns(
             bool is_agg_func = WhichDataType(column.type).isAggregateFunction();
 
             /// There are special const columns for example after prewhere sections.
-            if ((!column.type->isSummable() && !is_agg_func) || isColumnConst(*column.column))
+            if ((!column.type->isSummable() && !is_agg_func && !simple) || isColumnConst(*column.column))
             {
                 def.column_numbers_not_to_aggregate.push_back(i);
                 continue;
@@ -246,7 +260,14 @@ static SummingSortedAlgorithm::ColumnsDefinition defineColumns(
                 desc.is_agg_func_type = is_agg_func;
                 desc.column_numbers = {i};
 
-                if (!is_agg_func)
+                if (simple)
+                {
+                    // simple aggregate function
+                    desc.init(simple->getFunction(), true);
+                    if (desc.function->allocatesMemoryInArena())
+                        def.allocates_memory_in_arena = true;
+                }
+                else if (!is_agg_func)
                 {
                     desc.init("sumWithOverflow", {column.type});
                 }
@@ -354,7 +375,7 @@ static MutableColumns getMergedDataColumns(
     for (const auto & desc : def.columns_to_aggregate)
     {
         // Wrap aggregated columns in a tuple to match function signature
-        if (!desc.is_agg_func_type && isTuple(desc.function->getReturnType()))
+        if (!desc.is_agg_func_type && !desc.is_simple_agg_func_type && isTuple(desc.function->getReturnType()))
         {
             size_t tuple_size = desc.column_numbers.size();
             MutableColumns tuple_columns(tuple_size);
@@ -399,7 +420,7 @@ static void postprocessChunk(
         auto column = std::move(columns[next_column]);
         ++next_column;
 
-        if (!desc.is_agg_func_type && isTuple(desc.function->getReturnType()))
+        if (!desc.is_agg_func_type && !desc.is_simple_agg_func_type && isTuple(desc.function->getReturnType()))
         {
             /// Unpack tuple into block.
             size_t tuple_size = desc.column_numbers.size();
@@ -455,6 +476,13 @@ SummingSortedAlgorithm::SummingMergedData::SummingMergedData(
 {
     current_row.resize(def.column_names.size());
     initAggregateDescription();
+
+    /// Just to make startGroup() simpler.
+    if (def.allocates_memory_in_arena)
+    {
+        arena = std::make_unique<Arena>();
+        arena_size = arena->size();
+    }
 }
 
 void SummingSortedAlgorithm::SummingMergedData::startGroup(ColumnRawPtrs & raw_columns, size_t row)
@@ -466,6 +494,12 @@ void SummingSortedAlgorithm::SummingMergedData::startGroup(ColumnRawPtrs & raw_c
     /// Reset aggregation states for next row
     for (auto & desc : def.columns_to_aggregate)
         desc.createState();
+
+    if (def.allocates_memory_in_arena && arena->size() > arena_size)
+    {
+        arena = std::make_unique<Arena>();
+        arena_size = arena->size();
+    }
 
     if (def.maps_to_sum.empty())
     {
@@ -505,10 +539,10 @@ void SummingSortedAlgorithm::SummingMergedData::finishGroup()
             {
                 try
                 {
-                    desc.function->insertResultInto(desc.state.data(), *desc.merged_column, nullptr);
+                    desc.function->insertResultInto(desc.state.data(), *desc.merged_column, arena.get());
 
                     /// Update zero status of current row
-                    if (desc.column_numbers.size() == 1)
+                    if (!desc.is_simple_agg_func_type && desc.column_numbers.size() == 1)
                     {
                         // Flag row as non-empty if at least one column number if non-zero
                         current_row_is_zero = current_row_is_zero
@@ -586,7 +620,7 @@ void SummingSortedAlgorithm::SummingMergedData::addRowImpl(ColumnRawPtrs & raw_c
             if (desc.column_numbers.size() == 1)
             {
                 auto & col = raw_columns[desc.column_numbers[0]];
-                desc.add_function(desc.function.get(), desc.state.data(), &col, row, nullptr);
+                desc.add_function(desc.function.get(), desc.state.data(), &col, row, arena.get());
             }
             else
             {
@@ -595,7 +629,7 @@ void SummingSortedAlgorithm::SummingMergedData::addRowImpl(ColumnRawPtrs & raw_c
                 for (size_t i = 0; i < desc.column_numbers.size(); ++i)
                     column_ptrs[i] = raw_columns[desc.column_numbers[i]];
 
-                desc.add_function(desc.function.get(), desc.state.data(), column_ptrs.data(), row, nullptr);
+                desc.add_function(desc.function.get(), desc.state.data(), column_ptrs.data(), row, arena.get());
             }
         }
     }
@@ -688,10 +722,10 @@ IMergingAlgorithm::Status SummingSortedAlgorithm::merge()
                 return Status(merged_data.pull());
             }
 
-            merged_data.startGroup(current->all_columns, current->pos);
+            merged_data.startGroup(current->all_columns, current->getRow());
         }
         else
-            merged_data.addRow(current->all_columns, current->pos);
+            merged_data.addRow(current->all_columns, current->getRow());
 
         if (!current->isLast())
         {

@@ -1,3 +1,9 @@
+---
+toc_priority: 39
+toc_title: "Внешние словари"
+---
+
+
 # Внешние словари {#dicts-external-dicts}
 
 Существует возможность подключать собственные словари из различных источников данных. Источником данных для словаря может быть локальный текстовый/исполняемый файл, HTTP(s) ресурс или другая СУБД. Подробнее смотрите в разделе «[Источники внешних словарей](external-dicts-dict-sources.md)».
@@ -55,4 +61,3 @@ ClickHouse:
 -   [Ключ и поля словаря](external-dicts-dict-structure.md)
 -   [Функции для работы с внешними словарями](../../../sql-reference/functions/ext-dict-functions.md)
 
-[Оригинальная статья](https://clickhouse.tech/docs/ru/query_language/dicts/external_dicts/) <!--hide-->

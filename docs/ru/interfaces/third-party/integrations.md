@@ -1,3 +1,8 @@
+---
+toc_priority: 27
+toc_title: "Библиотеки для интеграции от сторонних разработчиков"
+---
+
 # Библиотеки для интеграции от сторонних разработчиков {#biblioteki-dlia-integratsii-ot-storonnikh-razrabotchikov}
 
 !!! warning "Disclaimer"
@@ -64,6 +69,9 @@
 -   Гео
     -   [MaxMind](https://dev.maxmind.com/geoip/)
         -   [clickhouse-maxmind-geoip](https://github.com/AlexeyKupershtokh/clickhouse-maxmind-geoip)
+-   AutoML
+    -   [MindsDB](https://mindsdb.com/)
+        -   [MindsDB](https://github.com/mindsdb/mindsdb) - Слой предиктивной аналитики и искусственного интеллекта для СУБД ClickHouse.
 
 ## Экосистемы вокруг языков программирования {#ekosistemy-vokrug-iazykov-programmirovaniia}
 
@@ -100,4 +108,3 @@
     -   [GraphQL](https://github.com/graphql)
         -   [activecube-graphql](https://github.com/bitquery/activecube-graphql)
         
-[Оригинальная статья](https://clickhouse.tech/docs/ru/interfaces/third-party/integrations/) <!--hide-->

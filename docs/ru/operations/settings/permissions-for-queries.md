@@ -1,3 +1,8 @@
+---
+toc_priority: 58
+toc_title: "Разрешения для запросов"
+---
+
 # Разрешения для запросов {#permissions_for_queries}
 
 Запросы в ClickHouse можно разделить на несколько типов:
@@ -54,4 +59,3 @@
 
 1
 
-[Оригинальная статья](https://clickhouse.tech/docs/ru/operations/settings/permissions_for_queries/) <!--hide-->

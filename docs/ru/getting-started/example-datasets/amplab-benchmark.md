@@ -1,3 +1,8 @@
+---
+toc_priority: 19
+toc_title: AMPLab Big Data Benchmark
+---
+
 # AMPLab Big Data Benchmark {#amplab-big-data-benchmark}
 
 См. https://amplab.cs.berkeley.edu/benchmark/
@@ -120,4 +125,3 @@ ORDER BY totalRevenue DESC
 LIMIT 1
 ```
 
-[Оригинальная статья](https://clickhouse.tech/docs/ru/getting_started/example_datasets/amplab_benchmark/) <!--hide-->

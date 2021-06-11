@@ -1,3 +1,8 @@
+---
+toc_priority: 20
+toc_title: "MySQL-интерфейс"
+---
+
 # MySQL-интерфейс {#mysql-interface}
 
 ClickHouse поддерживает взаимодействие по протоколу MySQL. Данная функция включается настройкой [mysql_port](../operations/server-configuration-parameters/settings.md#server_configuration_parameters-mysql_port) в конфигурационном файле:
